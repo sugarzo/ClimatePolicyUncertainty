@@ -8,8 +8,8 @@ folder = "D:/Desktop/news_finished/"  # 使用get_news_data模块获取新闻, �
 
 news_list = ["rmrb", "gmrb", "jjrb", "zjrb", "zqb"]
 for news in news_list:
-    score = pipeline(folder + news + ".csv", name=news, save_result=True)
-    score.to_csv("D:/Desktop/cpu_idx/" + news + ".csv")
+    score = pipeline(folder + news + ".csv", name=news, save_result=True)  # 对每家报纸计算比率, 令save_result=True保存中间结果
+    score.to_csv("D:/Desktop/cpu_idx/" + news + ".csv")  # 保存比率计算结果
 
-res = to_idx("D:/Desktop/cpu_idx/", save_result=True)
+res = to_idx("D:/Desktop/cpu_idx/", save_result=True)  # 使用所有报纸的比率数据计算cpu指数, 并保存中间结果
 res.to_csv("D:/Desktop/final_result/idx.csv")
