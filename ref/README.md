@@ -4,4 +4,3 @@
 
 关于cpu的其它资料:  
 [Climate Policy Uncertainty Index](http://www.policyuncertainty.com/climate_uncertainty.html)  
-[文献-气候政策不确定性]()
