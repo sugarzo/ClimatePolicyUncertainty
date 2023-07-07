@@ -1,4 +1,4 @@
-# from get_news_data import get_gmrb_data
+# from get_news_data import get_gmrb_data  # 以获取光明日报数据为例
 from process_news_data import pipeline, to_idx
 
 
