@@ -1,4 +1,4 @@
-## [get_news_data]()模块:  
+## [get_news_data](https://github.com/HaoningChen/ClimatePolicyUncertainty/blob/main/code/get_news_data.py)模块:  
 目前已实现人民日报、光明日报、中国青年报、文汇报、浙江日报、中国环境报和经济日报的爬取, 以及使用pipeline或者parallel_pipeline获取其它报纸的功能
 
 ## [process_news_data]()模块:  
