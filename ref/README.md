@@ -1,3 +1,3 @@
 构建方法参考:  
 
-语料库参考:  
+语料库参考:  [The dynamic spillover effects of climate policy uncertainty and coal price on carbon price: Evidence from China ](https://github.com/HaoningChen/ClimatePolicyUncertainty/blob/main/ref/The%20dynamic%20spillover%20effects%20of%20climate%20policy%20uncertainty%20and%20coal%20price%20on%20carbon%20price-Evidence%20from%20China-%E9%99%84%E5%BD%95.docx)
