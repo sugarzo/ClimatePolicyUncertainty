@@ -13,12 +13,16 @@ uncertainty = ["不确定", "不明确", "波动", "震荡", "动荡", "不稳",
                "不可预料", "不可预测", "不可预计", "不可估计"]
 
 
-def process_datetime(df: pd.DataFrame, start: str = "2010-12-01", end: str = "2023-06-30") -> pd.DataFrame:
+def process_datetime(df: pd.DataFrame, start: str = "2010-12-01", end: str = "2023-06-30",
+                     freq: str = "month") -> pd.DataFrame:
     df["datetime"] = pd.to_datetime(df["datetime"])
-    df["month"] = df["datetime"].dt.strftime("%Y-%m")  # 注意这里保留了年份
+    if freq == "month":
+        df["month"] = df["datetime"].dt.strftime("%Y-%m")  # 注意这里保留了年份
+    elif freq == "year":
+        df["year"] = df["datetime"].dt.strftime("%Y")
     df = df[df["datetime"] >= pd.to_datetime(start)]
     df = df[df["datetime"] <= pd.to_datetime(end)]
-    df.set_index(["month", "datetime"], inplace=True)
+    df.set_index([freq, "datetime"], inplace=True)
     df.fillna("nan", inplace=True)  # 将缺失值填充为字符串 'nan'
     print(df.info())
     return df
@@ -99,7 +103,7 @@ def pipeline(filepath: str, encoding: str = "utf-8-sig", start: str = "2010-12-0
     :return:
     """
     data = pd.read_csv(filepath, encoding=encoding)
-    data = process_datetime(data, start=start, end=end)
+    data = process_datetime(data, start=start, end=end, freq=freq)
     data = check_isin_cpu(data)
     score = norm_news_data_by_freq(data, name=name, freq=freq, save_result=save_result)
     score *= multiplier
@@ -152,7 +156,8 @@ def to_idx(folder_path: str, multiplier: int = 100, freq: str = "month", save_re
         all_idx = pd.concat([all_idx, df], axis=0)
     all_idx[freq] = pd.to_datetime(all_idx[freq])
     all_idx = all_idx.set_index([freq, "name"]).sort_index()
-    std = all_idx.groupby(freq).std()
+    # std = all_idx.groupby(freq).std()
+    std = all_idx.groupby("name").std()
     all_idx /= std
     mean_zscore = all_idx.groupby(freq).mean()
     scaled_zscore = mean_zscore / mean_zscore.mean()  # 如果要将结果的均值控制在100, 就必须用所有样本计算均值
