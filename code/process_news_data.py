@@ -25,6 +25,7 @@ def process_datetime(df: pd.DataFrame, start: str = "2010-12-01", end: str = "20
     df.set_index([freq, "datetime"], inplace=True)
     df.fillna("nan", inplace=True)  # 将缺失值填充为字符串 'nan'
     print(df.info())
+    print(df.head(1))
     return df
 
 
@@ -154,7 +155,7 @@ def to_idx(folder_path: str, multiplier: int = 100, freq: str = "month", save_re
         df = pd.read_csv(target)
         df = process_single_idx(df)
         all_idx = pd.concat([all_idx, df], axis=0)
-    all_idx[freq] = pd.to_datetime(all_idx[freq])
+    # all_idx[freq] = pd.to_datetime(all_idx[freq])
     all_idx = all_idx.set_index([freq, "name"]).sort_index()
     # std = all_idx.groupby(freq).std()
     std = all_idx.groupby("name").std()
