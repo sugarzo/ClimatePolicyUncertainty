@@ -15,6 +15,13 @@ uncertainty = ["不确定", "不明确", "波动", "震荡", "动荡", "不稳",
 
 def process_datetime(df: pd.DataFrame, start: str = "2010-12-01", end: str = "2023-06-30",
                      freq: str = "month") -> pd.DataFrame:
+    """
+    :param df: news dataset
+    :param start: the exact date you want to start with
+    :param end: the exact date you want to end your analysis
+    :param freq: "datetime", "month" or "year"
+    :return:
+    """
     df["datetime"] = pd.to_datetime(df["datetime"])
     if freq == "month":
         df["month"] = df["datetime"].dt.strftime("%Y-%m")  # 注意这里保留了年份
@@ -22,14 +29,18 @@ def process_datetime(df: pd.DataFrame, start: str = "2010-12-01", end: str = "20
         df["year"] = df["datetime"].dt.strftime("%Y")
     df = df[df["datetime"] >= pd.to_datetime(start)]
     df = df[df["datetime"] <= pd.to_datetime(end)]
-    df.set_index([freq, "datetime"], inplace=True)
+    if freq != "datetime":
+        df.set_index([freq, "datetime"], inplace=True)
+    else:
+        df.set_index(["datetime"], inplace=True)
     df.fillna("nan", inplace=True)  # 将缺失值填充为字符串 'nan'
     print(df.info())
     print(df.head(1))
     return df
 
 
-def check_isin_cpu(data: pd.DataFrame, c: list = None, p: list = None, u: list = None) -> pd.DataFrame:
+def check_isin_cpu(data: pd.DataFrame, c: list = None, p: list = None, u: list = None,
+                   show_detail=False) -> pd.DataFrame:
     if c is None:
         c = climate
     if p is None:
@@ -59,11 +70,39 @@ def check_isin_cpu(data: pd.DataFrame, c: list = None, p: list = None, u: list =
         if isin_c[i] == 1 and isin_p[i] == 1 and isin_u[i] == 1:  # 注意这里需要的是与还是或的关系
             isin_cpu[i] = 1
     data["isin_cpu"] = isin_cpu
+
+    # 接下来考虑c, p, u各部分的特征及对cpu新闻占比的边际贡献。由于研究的主要目的不在于此, 故计算结果比较粗略
+    # 考虑到中国最近的新闻可能含p量较高, 因此似乎有必要查看p对cpu新闻占比的边际贡献。
+    if show_detail:
+        num_c, num_p, num_u = 0, 0, 0
+        num_cu, num_pu, num_cp, num_cpu = 0, 0, 0, 0
+        for i in range(len(isin_c)):
+            if isin_c[i] == 1:
+                num_c += 1
+            if isin_p[i] == 1:
+                num_p += 1
+                if isin_c[i] == 1:
+                    num_cp += 1
+            if isin_u[i] == 1:
+                num_u += 1
+                if isin_c[i] == 1:
+                    num_cu += 1
+                if isin_p[i] == 1:
+                    num_pu += 1
+            if isin_cpu[i] == 1:
+                num_cpu += 1
+        print("%c: ", num_c / len(isin_c))
+        print("%p: ", num_p / len(isin_p))
+        print("%u: ", num_u / len(isin_u))
+        print("%c&p: ", num_cp / len(isin_c))
+        print("%c&u: ", num_cu / len(isin_c))
+        print("%p&u: ", num_pu / len(isin_c))
+        print("%c&p&u: ", num_cpu / len(isin_c), '\n')
     return data
 
 
 def norm_news_data_by_freq(data: pd.DataFrame, target: str = "isin_cpu", freq: str = "month",
-                           name: str = "score", save_result: bool = False) -> pd.Series:
+                           name: str = "score", save_mid_result: bool = False) -> pd.Series:
     """
     按照给定的频率将对应频率内的新闻数量放缩至[0, 1]区间
 
@@ -71,20 +110,21 @@ def norm_news_data_by_freq(data: pd.DataFrame, target: str = "isin_cpu", freq: s
     :param target:
     :param freq:
     :param name:
-    :param save_result: 是否保存结果
+    :param save_mid_result: 是否保存中间结果
     :return:
     """
     total_news_mth = data[target].groupby(freq).count()
     num_news_selected = data[target].groupby(freq).apply(lambda x: x[x.values == 1].count())
     norm = pd.Series(num_news_selected.values / total_news_mth.values, index=num_news_selected.index, name=name)
-    if save_result:
+    if save_mid_result:
         result = pd.DataFrame({"news_selected": num_news_selected, "total_news": total_news_mth, "ratio": norm})
         result.to_csv(name + ".csv")
     return norm
 
 
 def pipeline(filepath: str, encoding: str = "utf-8-sig", start: str = "2010-12-01", end: str = "2023-06-30",
-             multiplier: int = 1, name: str = "score", freq: str = "month", save_result: bool = False) -> pd.Series:
+             multiplier: int = 1, name: str = "score", freq: str = "month", save_mid_result: bool = False,
+             show_cpu_detail=False) -> pd.Series:
     """
     example:
     folder_path = "D:/Desktop/news_finished/"
@@ -100,13 +140,14 @@ def pipeline(filepath: str, encoding: str = "utf-8-sig", start: str = "2010-12-0
     :param multiplier: 乘数(考虑经济意义)
     :param name: 输出的Series的名字
     :param freq: 计算cpu所按的时间频率
-    :param save_result: 是否保存中间结果(每月符合条件的新闻数和每月新闻总数)
+    :param save_mid_result: 是否保存中间结果(每月符合条件的新闻数和每月新闻总数)
+    :param show_cpu_detail: 是否输出更详细的cpu统计结果
     :return:
     """
     data = pd.read_csv(filepath, encoding=encoding)
     data = process_datetime(data, start=start, end=end, freq=freq)
-    data = check_isin_cpu(data)
-    score = norm_news_data_by_freq(data, name=name, freq=freq, save_result=save_result)
+    data = check_isin_cpu(data, show_detail=show_cpu_detail)
+    score = norm_news_data_by_freq(data, name=name, freq=freq, save_mid_result=save_mid_result)
     score *= multiplier
     return score
 
@@ -163,11 +204,10 @@ def to_idx(folder_path: str, multiplier: int = 100, freq: str = "month", save_re
     mean_zscore = all_idx.groupby(freq).mean()
     scaled_zscore = mean_zscore / mean_zscore.mean()  # 如果要将结果的均值控制在100, 就必须用所有样本计算均值
 
-    # 原文中是用所有样本的均值, 但这样有未来函数. 此处改为用历史样本(从t0开始到当下时间段的均值, 即m_i序列)
-    cummean = cummean(mean_zscore)
-    # scaled_zscore = pd.Series(mean_zscore.values.flatten() / cummean.values, index=cummean.index)
-
     if save_result:
+        cummean = cummean(mean_zscore)
+        # 原文中是用所有样本的均值, 但这样有未来函数. 此处可考虑改为用历史样本(从t0开始到当下时间段的均值, 即m_i序列)
+        # scaled_zscore = pd.Series(mean_zscore.values.flatten() / cummean.values, index=cummean.index)
         result = cummean
         result.to_csv("mu.csv")
     scaled_zscore *= multiplier
