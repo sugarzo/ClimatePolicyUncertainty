@@ -11,4 +11,6 @@
 Python3 + [requiresments.txt](https://github.com/HaoningChen/ClimatePolicyUncertainty/blob/main/requirements.txt) (Windows和Linux均可)
 
 ## 额外的发现  
-由于众所周知的原因, 中国的新闻含p量十分高。因此似乎有必要弄清楚c, p和u的占比结构, 以及它们各自对cpu新闻在总新闻中占比的边际贡献。[supplemental_material](https://github.com/HaoningChen/ClimatePolicyUncertainty/blob/main/supplemental_material.csv)计算了人民日报, 光明日报, 经济日报和中国青年报各自的c, p, u, cp, cu, pu和cpu新闻在总新闻中的比例
+由于众所周知的原因, 中国的新闻含p量十分高。因此似乎有必要弄清楚c, p和u的占比结构, 以及它们各自对cpu新闻在总新闻中占比的边际贡献。  
+
+[supplemental_material](https://github.com/HaoningChen/ClimatePolicyUncertainty/blob/main/supplemental_material.csv)计算了人民日报、光明日报、经济日报和中国青年报各自的c, p, u, cp, cu, pu和cpu新闻在总新闻中的比例, 计算结果以小数形式呈现(乘上100%即为百分数)
