@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import os
 
@@ -122,17 +123,11 @@ def norm_news_data_by_freq(data: pd.DataFrame, target: str = "isin_cpu", freq: s
     return norm
 
 
-def pipeline(filepath: str, encoding: str = "utf-8-sig", start: str = "2010-12-01", end: str = "2023-06-30",
-             multiplier: int = 1, name: str = "score", freq: str = "month", save_mid_result: bool = False,
-             show_cpu_detail=False) -> pd.Series:
+def pipeline(filepath: str, historical_data: str = None, encoding: str = "utf-8-sig", start: str = "2010-12-01",
+             end: str = "2023-06-30", multiplier: int = 1, name: str = "score", freq: str = "month",
+             save_mid_result: bool = False, show_cpu_detail=False) -> pd.Series:
     """
-    example:
-    folder_path = "D:/Desktop/news_finished/"
-    target_dir = "D:/Desktop/cpu_idx/"
-
-    score = pipeline(folder_path + "gmrb.csv", name="gmrb")
-    score.to_csv(target_dir + "gmrb.csv")
-
+    :param historical_data: 使用旧数据的路径地址（和idx.csv相同）
     :param filepath: 数据文件的地址
     :param encoding: 编码格式, 默认utf-8-sig
     :param start: 起始时间
@@ -145,14 +140,31 @@ def pipeline(filepath: str, encoding: str = "utf-8-sig", start: str = "2010-12-0
     :return:
     """
     data = pd.read_csv(filepath, encoding=encoding)
+
+    if historical_data and os.path.isfile(historical_data):
+        hist_data = pd.read_csv(historical_data, index_col=0)
+        most_recent_date = hist_data.index.max()
+        # 筛选之前的日期
+        data = data[pd.to_datetime(data["datetime"]) > pd.to_datetime(most_recent_date)]
+
     data = process_datetime(data, start=start, end=end, freq=freq)
     data = check_isin_cpu(data, show_detail=show_cpu_detail)
     score = norm_news_data_by_freq(data, name=name, freq=freq, save_mid_result=save_mid_result)
+
+    if historical_data and os.path.isfile(historical_data):
+        overlap = score.index.intersection(hist_data.index)
+        if not overlap.empty:
+            hist_data = hist_data.drop(overlap) #type:DataFrame
+        score = pd.DataFrame(score.values, index=score.index)
+        score.columns = hist_data.columns # 对齐列索引
+        df = pd.concat([hist_data, score], axis=0)
+        score = df
+
     score *= multiplier
     return score
 
 
-def to_idx(folder_path: str, multiplier: int = 100, freq: str = "month", save_result: bool = False) -> pd.Series:
+def to_idx(folder_path: str, output_path: str,multiplier: int = 100, freq: str = "month", save_result: bool = False) -> pd.Series:
     """
     参考这段话:
     For each newspaper, he scales the number of relevant articles per month with the total number of
@@ -166,6 +178,7 @@ def to_idx(folder_path: str, multiplier: int = 100, freq: str = "month", save_re
     (2) 将 s_ij 除以其在截面上的标准差 sigma_si, 将结果记为 z_ij, 并在截面上取 z_ij 的均值 m_i
     (3) 对于时序数据 m_i, 将其除以自身的均值, 再乘上一个乘数(默认为100)得到最终结果
 
+    :param output_path: mu.csv输出地址
     :param folder_path: 文件夹地址, 程序会读入该文件夹下面所有csv文件, 并按照上述步骤计算指数
     :param multiplier: 乘数, 默认为100
     :param freq: "month"按月, "datetime"按天, 其它频率可自定义
@@ -209,7 +222,7 @@ def to_idx(folder_path: str, multiplier: int = 100, freq: str = "month", save_re
         # 原文中是用所有样本的均值, 但这样有未来函数. 此处可考虑改为用历史样本(从t0开始到当下时间段的均值, 即m_i序列)
         # scaled_zscore = pd.Series(mean_zscore.values.flatten() / cummean.values, index=cummean.index)
         result = cummean
-        result.to_csv("mu.csv")
+        result.to_csv(f"{output_path}mu.csv")
     scaled_zscore *= multiplier
     scaled_zscore.name = "score"
     print(scaled_zscore)
