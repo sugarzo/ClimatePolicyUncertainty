@@ -20,7 +20,7 @@ result = parallel_pipeline(BaseURL, sample_page=page, start="2023-01-01", end="2
                            
 result.to_csv("news_env.csv", encoding="utf-8-sig)
 """
-
+default_n_jobs = -1
 
 def get_calendar(start, end, strftime="%Y-%m-%d") -> list[str]:
     """
@@ -196,7 +196,7 @@ def pipeline(base_url, sample_page, start, end, strftime="%Y-%m-%d", page_select
 
 
 def parallel_pipeline(base_url, sample_page, start, end, strftime="%Y-%m-%d", page_selector="ul > li > a#pageLink",
-                      title_selector="div#titleList > ul > li > a", article_selector="div#articleContent", n_jobs=-1,
+                      title_selector="div#titleList > ul > li > a", article_selector="div#articleContent", n_jobs=None,
                       process_day=True, symbol="/", encoding="utf-8", href_page="href", href_article="href", whb=False,
                       eco=False, nfrb=False) -> pd.DataFrame:
     """
@@ -226,6 +226,8 @@ def parallel_pipeline(base_url, sample_page, start, end, strftime="%Y-%m-%d", pa
     :param nfrb: 如果是南方日报, 日期需要额外的处理
     """
     calendar = get_calendar(start, end, strftime)
+    if n_jobs is None:
+        n_jobs = default_n_jobs
 
     def process(day):
         all_results = {}
@@ -244,7 +246,6 @@ def parallel_pipeline(base_url, sample_page, start, end, strftime="%Y-%m-%d", pa
                     article = get_article(a_url, select=article_selector, encoding=encoding)
                     all_results[day][title[a_id]] = article
         return all_results
-
     results = Parallel(n_jobs=n_jobs)(delayed(process)(day) for day in calendar)
     all_results_dict = {}
     for d in results:
@@ -310,7 +311,7 @@ def get_hjb_data(start: str, end: str) -> pd.DataFrame:
     """
     result = parallel_pipeline("http://epaper.cenews.com.cn/html/", sample_page="node_2.htm", start=start, end=end,
                                page_selector="tr > td > a#pageLink", title_selector='tr > td:nth-of-type(2).px12 > a',
-                               article_selector="div#ozoom", n_jobs=-1, encoding="utf-8-sig")
+                               article_selector="div#ozoom", n_jobs=None, encoding="utf-8-sig")
     return result
 
 
@@ -422,13 +423,16 @@ def get_today_news(news_list: list = None) -> dict:
     return results
 
 
-def get_all_news(start: str, end: str, news_list: list = None) -> dict:
+def get_all_news(start: str, end: str, news_list: list = None,n_job = -1) -> dict:
     """
     :param start: 开始日期, %Y-%m-%d格式
     :param end: 截止日期, %Y-%m-%d格式
     :param news_list: 包含报纸名的列表, rmrb: 人民日报; gmrb: 光明日报; zqb: 中国青年报; whb: 文汇报; zjrb: 浙江日报; ecod: 经济日报
     :return: 包含当日报纸新闻的dict, 每个key下的内容为对应报纸新闻的pd.DataFrame
     """
+    global default_n_jobs
+    default_n_jobs = n_job
+
     if news_list is None:
         news_list = ["rmrb", "gmrb", "zqb", "whb", "zjrb", "ecod"]
     results = {}
